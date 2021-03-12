@@ -49,11 +49,10 @@ for infile in sys.argv[1:]:
     # but it is.  So I replace that one value with the minimum
     # valid value of the dataset as a whole.   
 
-    data = np.nan_to_num(data, nan=np.nanmin(data))
+    # data = np.nan_to_num(data, nan=np.nanmin(data))
 
     # log of data
-
-    data = np.log(data)
+    # data = np.log(data)
 
     # Get the dimensions of the VTK grid - in this case it'll
     # be 2049, 2049, 1 - see above.  We 'reshape' the data into a
@@ -85,26 +84,30 @@ for infile in sys.argv[1:]:
     # this loses information - there are 65536 possible 16 bit numbers,
     # and a whole lot more possible floating point numbers.
 
-    data = (((data - np.min(data)) / (np.max(data) - np.min(data))) * 65535).astype('u2')
+    sdata = (((data - np.nanmin(data)) / (np.nanmax(data) - np.nanmin(data))) * 65535).astype('u2')
 
     # This magic takes each 16 bit number and shifts it rights 8 bits -
     # that is, takes the upper 8 bits of each - and reinterprets as a
     # 8 bit number for the red channel.  This is then 'flattened' into
     # a simple list.
 
-    red = np.right_shift(data, 8).astype('u1').flatten()
+    red = np.right_shift(sdata, 8).astype('u1').flatten()
 
     # This magic takes each 16 bit number and takes only the *lower*
     # 8 bits and reinterprets it as a simple list of 8 bit numbers for
     # the green channel.
 
-    green = (data % 256).astype('u1').flatten()
+    green = (sdata % 256).astype('u1').flatten()
+
+    # blue is the NAN flag
+
+    blue = np.where(np.isnan(data), 255, 0).astype('u1').flatten()
 
     # Now we form the output pixels by combining the red and green channels
     # we set up above with a zero blue channel that we create by red - red.
     # The PNG code expects a simple list of (r,g,b) values.
 
-    rgb = np.column_stack((red,green,red-red)).reshape(-1,3*SZ)
+    rgb = np.column_stack((red,green,blue)).reshape(-1,3*SZ)
 
     # and we write out the png file
 
